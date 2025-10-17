@@ -65,7 +65,7 @@ const Login = () => {
       <div className="hidden md:flex w-1/2 bg-gradient-to-br from-emerald-600 to-emerald-800 text-white items-center justify-center p-10">
         <div className="text-center space-y-6">
           <div className="mx-auto w-16 h-16 bg-white rounded-xl flex items-center justify-center text-emerald-700 font-bold text-2xl">R</div>
-          <h1 className="text-3xl font-bold">RunPro Admin Portal</h1>
+          <h1 className="text-3xl font-bold">RunPro Customer Admin Portal</h1>
           <p className="max-w-xs text-emerald-100">
             Manage services, deliveries, providers and payments — all from a single dashboard.
           </p>
