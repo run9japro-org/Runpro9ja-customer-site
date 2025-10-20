@@ -62,7 +62,7 @@ const Sidebar = ({
     });
     
     // Redirect to login page
-    window.location.href = "/login";
+    window.location.href = "/";
   };
 
   const handleNavigation = (item) => {
