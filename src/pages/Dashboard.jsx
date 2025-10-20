@@ -7,7 +7,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_BASE_URL = 'https://runpro9ja-pxqoa.ondigitalocean.app/api/admins';
+  const API_BASE_URL = 'https://runpro9ja-pxqoa.ondigitalocean.app/api/admin';
 
   useEffect(() => {
     fetchDashboardData();
@@ -18,7 +18,7 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('adminToken');
+  const token = localStorage.getItem("token");
       if (!token) {
         throw new Error('No authentication token found. Please log in again.');
       }
