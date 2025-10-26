@@ -40,7 +40,7 @@ const Login = () => {
       }
 
       // Only allow SUPER_ADMIN or ADMIN_HEAD
-      if (!["super_admin", "admin_head"].includes(user.role)) {
+      if (!["super_admin", "admin_head","admin_customer_service","admin_agent_service"].includes(user.role)) {
         setError("Access denied: You are not authorized to use this portal.");
         setLoading(false);
         return;
@@ -76,7 +76,7 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center bg-gray-50 p-6">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 relative">
           <h2 className="text-2xl font-semibold text-emerald-700 text-center mb-2">Welcome back</h2>
-          <p className="text-center text-sm text-gray-500 mb-6">Sign in to the Customer admin account</p>
+          <p className="text-center text-sm text-gray-500 mb-6">Sign in to your Customer admin account</p>
 
           {error && (
             <div className="mb-4 text-sm text-red-600 bg-red-50 px-3 py-2 rounded">

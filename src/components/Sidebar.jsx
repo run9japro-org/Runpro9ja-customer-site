@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import image from "../assets/logo.png";
 import icon1 from "../assets/icons/dashboard-icon.png";
 import icon2 from "../assets/icons/services.png";
@@ -11,19 +12,33 @@ import icon8 from "../assets/icons/complaint.png";
 import icon9 from "../assets/icons/logout.png";
 
 const Sidebar = ({
-  activePage,
-  setActivePage,
   sidebarOpen,
   setSidebarOpen,
-  onLogout // Add this prop for logout handling
+  onLogout
 }) => {
-  // Main navigation items
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get current active page from route
+  const getActivePage = () => {
+    const path = location.pathname;
+    if (path === '/dashboard' || path === '/') return 'dashboard';
+    if (path === '/services') return 'services';
+    if (path === '/delivery') return 'delivery';
+    if (path === '/providers') return 'providers';
+    if (path === '/support') return 'support';
+    return 'dashboard';
+  };
+
+  const activePage = getActivePage();
+
+  // Main navigation items with routes
   const mainItems = [
-    { id: "dashboard", label: "Dashboard", icon: icon1 },
-    { id: "services", label: "Services", icon: icon2 },
-    { id: "delivery", label: "Delivery tracking", icon: icon3 },
-    { id: "providers", label: "Service Providers", icon: icon4 },
-    { id: "support", label: "Customer Support Team", icon: icon5 },
+    { id: "dashboard", label: "Dashboard", icon: icon1, path: "/dashboard" },
+    { id: "services", label: "Services", icon: icon2, path: "/services" },
+    { id: "delivery", label: "Delivery tracking", icon: icon3, path: "/delivery" },
+    { id: "providers", label: "Service Providers", icon: icon4, path: "/providers" },
+    { id: "support", label: "Customer Support Team", icon: icon5, path: "/support" },
   ];
 
   // Settings navigation items
@@ -54,22 +69,16 @@ const Sidebar = ({
     // Clear sessionStorage
     sessionStorage.clear();
     
-    // If you're using cookies, clear them too
-    document.cookie.split(";").forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
-    
-    // Redirect to login page
-    window.location.href = "/";
+    // Use React Router navigation instead of window.location
+    navigate("/", { replace: true });
   };
 
   const handleNavigation = (item) => {
     if (item.id === "logout") {
       handleLogout();
-    } else {
-      setActivePage(item.id);
+    } else if (item.path) {
+      // Use React Router navigation
+      navigate(item.path);
       setSidebarOpen(false);
     }
   };
