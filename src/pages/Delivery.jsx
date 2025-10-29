@@ -61,7 +61,58 @@ const Delivery = () => {
   const [currentStep, setCurrentStep] = useState(0);
 
   const center = [6.5244, 3.3792]; // Lagos center
-
+// Add this near the top of your Delivery component, after the state declarations
+useEffect(() => {
+  // Check if there's a specific order to track from the Services page
+  const trackingOrderData = localStorage.getItem('trackingOrder');
+  if (trackingOrderData) {
+    try {
+      const order = JSON.parse(trackingOrderData);
+      
+      // Find if this order exists in our deliveries
+      const existingDelivery = deliveries.find(d => d.orderId === order.orderId);
+      
+      if (existingDelivery) {
+        setSelectedDelivery(existingDelivery);
+        // Auto-start tracking for this order
+        setIsTracking(true);
+      } else {
+        // Create a mock delivery for tracking if not found
+        const mockDelivery = {
+          id: Date.now(),
+          orderId: order.orderId,
+          location: [6.5244, 3.3792], // Default Lagos location
+          name: order.customerName,
+          address: order.address,
+          status: "In Transit",
+          rider: "Samuel Biyomi", // Default rider
+          serviceType: order.serviceType,
+          lastUpdated: new Date(),
+          customerPhone: "+234 801 234 5678",
+          items: ["Package"],
+          specialInstructions: "Regular delivery"
+        };
+        
+        // Add route and estimated arrival
+        const deliveryWithRoute = {
+          ...mockDelivery,
+          route: generateTrackingRoute(mockDelivery.location),
+          estimatedArrival: new Date(Date.now() + 30 * 60 * 1000)
+        };
+        
+        setDeliveries(prev => [deliveryWithRoute, ...prev]);
+        setSelectedDelivery(deliveryWithRoute);
+        setIsTracking(true);
+      }
+      
+      // Clear the stored data
+      localStorage.removeItem('trackingOrder');
+    } catch (error) {
+      console.error("Error parsing tracking order:", error);
+      localStorage.removeItem('trackingOrder');
+    }
+  }
+}, [deliveries]);
   // Generate sample tracking route
   const generateTrackingRoute = (startLocation) => {
     const routes = [

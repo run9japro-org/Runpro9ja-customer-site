@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getServiceRequests, getDeliveryDetails } from "../services/adminService";
 import { MoreVertical, Eye, Edit, Truck } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
+
 const Services = () => {
   const [serviceRequests, setServiceRequests] = useState([]);
   const [deliveryDetails, setDeliveryDetails] = useState([]);
@@ -14,34 +15,75 @@ const Services = () => {
   const [activeMenu, setActiveMenu] = useState(null);
   const navigate = useNavigate();
 
-  const handleDeliveryClick = () => {
+  const handleDeliveryClick = (order) => {
+    localStorage.setItem('trackingOrder', JSON.stringify({
+      orderId: order.orderId,
+      customerName: order.orderBy || order.customerName,
+      address: order.pickupDestination,
+      serviceType: order.deliveryType || order.serviceType
+    }));
     navigate('/delivery');
   };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch service requests
         const requestsResponse = await getServiceRequests(50, filterStatus);
-        console.log("Service requests response:", requestsResponse); // Debug log
+        console.log("Service requests response:", requestsResponse);
 
         if (requestsResponse && requestsResponse.success) {
-          setServiceRequests(requestsResponse.serviceRequests || []);
+          const orders = requestsResponse.orders || requestsResponse.serviceRequests || [];
+          
+          const transformedOrders = orders.map(order => ({
+            requestId: order._id || order.requestId || `SR-${Math.random().toString(36).substr(2, 4)}`,
+            customerName: order.customer?.fullName || 'Unknown Customer',
+            serviceType: order.serviceCategory?.name || 'General Service',
+            status: order.status || 'pending',
+            dueDate: order.scheduledDate ? new Date(order.scheduledDate).toLocaleDateString() : 'Not scheduled',
+            originalOrder: order
+          }));
+          
+          setServiceRequests(transformedOrders);
         } else {
+          console.log("Using sample service requests data");
           setServiceRequests(getSampleServiceRequests());
         }
 
-        // Fetch delivery details
+        // 🔧 FIXED: Fetch delivery details with proper handling
         const deliveriesResponse = await getDeliveryDetails(20);
-        console.log("Delivery details response:", deliveriesResponse); // Debug log
+        console.log("🔄 Delivery details response:", deliveriesResponse);
 
         if (deliveriesResponse && deliveriesResponse.success) {
-          setDeliveryDetails(deliveriesResponse.deliveryDetails || []);
+          // Handle the actual response structure from backend
+          const deliveries = deliveriesResponse.deliveryDetails || [];
+          
+          // Ensure all deliveries have proper structure
+          const formattedDeliveries = deliveries.map(delivery => ({
+            orderId: delivery.orderId || `RP-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+            deliveryType: delivery.deliveryType || "Package Delivery",
+            pickupDestination: delivery.pickupDestination || 
+                              (delivery.pickup && delivery.destination ? 
+                               `From: ${delivery.pickup} To: ${delivery.destination}` : 
+                               "Location not specified"),
+            date: delivery.date || new Date().toLocaleDateString("en-GB"),
+            estimatedTime: delivery.estimatedTime || "2 Hours",
+            riderInCharge: delivery.riderInCharge || "Not assigned",
+            orderBy: delivery.orderBy || "Unknown Customer",
+            deliveredTo: delivery.deliveredTo || delivery.orderBy || "Unknown Customer",
+            status: delivery.status || "pending",
+            originalOrder: delivery.originalOrder || delivery
+          }));
+          
+          console.log("✅ Formatted delivery details:", formattedDeliveries);
+          setDeliveryDetails(formattedDeliveries);
         } else {
+          console.log("🔄 Using sample delivery details data");
           setDeliveryDetails(getSampleDeliveryDetails());
         }
 
       } catch (err) {
-        console.error("Error fetching services data:", err);
+        console.error("❌ Error fetching services data:", err);
         setError("Failed to load services data");
         setServiceRequests(getSampleServiceRequests());
         setDeliveryDetails(getSampleDeliveryDetails());
@@ -66,40 +108,63 @@ const Services = () => {
   // Status badge component
   const StatusBadge = ({ status }) => {
     const getStatusColor = (status) => {
-      switch (status?.toLowerCase()) {
+      const statusLower = status?.toLowerCase();
+      switch (statusLower) {
         case "completed":
         case "success":
           return "text-green-600 bg-green-50 border border-green-200";
-        case "in progress":
+        case "in-progress":
         case "active":
         case "accepted":
+        case "agent_selected":
+        case "quotation_accepted":
           return "text-yellow-600 bg-yellow-50 border border-yellow-200";
         case "pending":
+        case "requested":
+        case "pending_agent_response":
+        case "quotation_provided":
           return "text-orange-600 bg-orange-50 border border-orange-200";
         case "cancelled":
         case "failed":
         case "rejected":
           return "text-red-600 bg-red-50 border border-red-200";
+        case "inspection_scheduled":
+        case "inspection_completed":
+          return "text-blue-600 bg-blue-50 border border-blue-200";
         default:
           return "text-gray-600 bg-gray-50 border border-gray-200";
       }
     };
 
     const formatStatus = (status) => {
-      switch (status?.toLowerCase()) {
+      const statusLower = status?.toLowerCase();
+      switch (statusLower) {
         case "success":
           return "Completed";
-        case "active":
+        case "in-progress":
         case "accepted":
+        case "agent_selected":
           return "In Progress";
         case "pending":
+        case "requested":
+        case "pending_agent_response":
           return "Pending";
         case "cancelled":
           return "Cancelled";
         case "failed":
           return "Failed";
+        case "rejected":
+          return "Rejected";
+        case "inspection_scheduled":
+          return "Inspection Scheduled";
+        case "inspection_completed":
+          return "Inspection Completed";
+        case "quotation_provided":
+          return "Quotation Provided";
+        case "quotation_accepted":
+          return "Quotation Accepted";
         default:
-          return status;
+          return status ? status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown';
       }
     };
 
@@ -146,8 +211,15 @@ const Services = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 View Details
               </button>
-
-
+              {order.deliveryType && (
+                <button
+                  onClick={() => handleDeliveryClick(order)}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <Truck className="w-4 h-4 mr-2" />
+                  Track Delivery
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -159,13 +231,15 @@ const Services = () => {
   const OrderDetailsModal = ({ order, onClose }) => {
     if (!order) return null;
 
+    const orderData = order.originalOrder || order;
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold text-gray-900">
-                Order Details - {order.orderId}
+                Order Details - {order.requestId || order.orderId}
               </h3>
               <button
                 onClick={onClose}
@@ -183,58 +257,75 @@ const Services = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Order ID
                   </label>
-                  <p className="text-sm text-gray-900 font-semibold">{order.orderId}</p>
+                  <p className="text-sm text-gray-900 font-semibold">{order.requestId || order.orderId}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Delivery Type
+                    {order.deliveryType ? 'Delivery Type' : 'Service Type'}
                   </label>
-                  <p className="text-sm text-gray-900">{order.deliveryType}</p>
+                  <p className="text-sm text-gray-900">{order.deliveryType || order.serviceType}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date
+                    Status
                   </label>
-                  <p className="text-sm text-gray-900">{order.date}</p>
+                  <StatusBadge status={order.status} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Estimated Time
+                    Customer
                   </label>
-                  <p className="text-sm text-gray-900">{order.estimatedTime}</p>
+                  <p className="text-sm text-gray-900">{order.customerName || order.orderBy}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rider in Charge
+                    Date
                   </label>
-                  <p className="text-sm text-gray-900">{order.riderInCharge}</p>
+                  <p className="text-sm text-gray-900">{order.date || order.dueDate}</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ordered By
-                  </label>
-                  <p className="text-sm text-gray-900">{order.orderBy}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Delivered To
-                  </label>
-                  <p className="text-sm text-gray-900">{order.deliveredTo}</p>
-                </div>
+                {order.estimatedTime && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Estimated Time
+                    </label>
+                    <p className="text-sm text-gray-900">{order.estimatedTime}</p>
+                  </div>
+                )}
+                {order.riderInCharge && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rider in Charge
+                    </label>
+                    <p className="text-sm text-gray-900">{order.riderInCharge}</p>
+                  </div>
+                )}
+                {orderData.price && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price
+                    </label>
+                    <p className="text-sm text-gray-900">₦{orderData.price.toLocaleString()}</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pickup & Destination
-              </label>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-700">{order.pickupDestination}</p>
+            {(order.pickupDestination || orderData.pickupLocation) && (
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {order.deliveryType ? 'Pickup & Destination' : 'Location Details'}
+                </label>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    {order.pickupDestination || 
+                     `From: ${orderData.pickupLocation}${orderData.destinationLocation ? ` To: ${orderData.destinationLocation}` : ''}`}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="mt-6 flex justify-end space-x-3">
               <button
@@ -243,12 +334,14 @@ const Services = () => {
               >
                 Close
               </button>
-              <button
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                onClick={handleDeliveryClick}
-              >
-                Track Delivery
-              </button>
+              {order.deliveryType && (
+                <button
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                  onClick={() => handleDeliveryClick(order)}
+                >
+                  Track Delivery
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -265,51 +358,65 @@ const Services = () => {
   const getSampleServiceRequests = () => {
     return [
       {
-        requestId: "IP-001",
+        requestId: "SR-001",
         customerName: "Adejabola Ayomide",
         serviceType: "Babysitting",
-        status: "In progress",
+        status: "in-progress",
         dueDate: "15/06/2025",
       },
       {
-        requestId: "IP-002",
+        requestId: "SR-002",
         customerName: "Chinedu Okoro",
         serviceType: "Plumbing",
-        status: "Completed",
+        status: "completed",
         dueDate: "10/06/2025",
       },
       {
-        requestId: "IP-003",
+        requestId: "SR-003",
         customerName: "Funke Adebayo",
         serviceType: "Cleaning",
-        status: "Pending",
+        status: "pending",
         dueDate: "20/06/2025",
       },
     ];
   };
 
+  // 🔧 FIXED: Updated sample delivery details to match backend service types
   const getSampleDeliveryDetails = () => {
     return [
       {
         orderId: "RP-267",
-        deliveryType: "Errand service",
+        deliveryType: "Grocery Delivery",
         pickupDestination: "From: Jeobel, Atakuko To: Quanna Micaline, Lekki Teligate",
         date: "09/10/25",
-        estimatedTime: "2 Hours",
+        estimatedTime: "1.5 Hours",
         riderInCharge: "Samuel Biyomi",
         orderBy: "Mariam Hassan",
         deliveredTo: "Mariam Hassan",
+        status: "in-progress"
       },
       {
         orderId: "RP-268",
-        deliveryType: "Dispatch delivery",
+        deliveryType: "Moving Service", 
         pickupDestination: "From: 23. Sukenu Qie Road Casso To: Quanna Micaline, Lekki Teligate",
         date: "09/10/25",
-        estimatedTime: "2 Hours",
+        estimatedTime: "4 Hours",
         riderInCharge: "Samuel Biyomi",
         orderBy: "Mariam Hassan",
         deliveredTo: "Chakouma Berry",
+        status: "completed"
       },
+      {
+        orderId: "RP-269",
+        deliveryType: "Package Delivery",
+        pickupDestination: "From: Victoria Island To: Ikeja GRA",
+        date: "10/10/25",
+        estimatedTime: "2 Hours",
+        riderInCharge: "Not assigned",
+        orderBy: "Adejabola Ayomide",
+        deliveredTo: "Adejabola Ayomide",
+        status: "pending"
+      }
     ];
   };
 
@@ -367,7 +474,7 @@ const Services = () => {
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
-              <option value="active">In Progress</option>
+              <option value="in-progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -449,7 +556,7 @@ const Services = () => {
         </div>
       </div>
 
-      {/* Delivery Details List Section */}
+      {/* 🔧 FIXED: Delivery Details List Section */}
       <div className="overflow-hidden bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-lg font-semibold text-gray-900">
