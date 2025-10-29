@@ -127,7 +127,25 @@ const ServiceProviders = () => {
     return isNaN(num) ? fallback : num;
   };
 
-  // Sample data fallback
+  // Format phone number for display
+  const formatPhoneNumber = (phone) => {
+    if (!phone || phone === 'Not provided') return 'N/A';
+    
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Format Nigerian phone numbers
+    if (cleaned.startsWith('234') && cleaned.length === 13) {
+      return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 9)} ${cleaned.slice(9)}`;
+    } else if (cleaned.startsWith('0') && cleaned.length === 11) {
+      return `+234 ${cleaned.slice(1, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
+    } else if (cleaned.length === 10) {
+      return `+234 ${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
+    }
+    
+    return phone; // Return as is if format doesn't match
+  };
+
+  // Sample data fallback - UPDATED with phone numbers
   const getSampleServiceProviders = () => {
     return [
       {
@@ -138,6 +156,8 @@ const ServiceProviders = () => {
         status: "Active",
         workRate: 89,
         location: "No 16, Complex 2, Tejuosho Market, Yaba, Lagos",
+        phone: "+234-801-234-5678",
+        email: "oladejo@email.com"
       },
       {
         id: "890222",
@@ -147,6 +167,8 @@ const ServiceProviders = () => {
         status: "Active",
         workRate: 92,
         location: "25, Allen Avenue, Ikeja, Lagos",
+        phone: "+234-802-345-6789",
+        email: "adebola@email.com"
       },
       {
         id: "890223",
@@ -156,6 +178,8 @@ const ServiceProviders = () => {
         status: "Active",
         workRate: 78,
         location: "14, Awolowo Road, Ikoyi, Lagos",
+        phone: "+234-803-456-7890",
+        email: "chinedu@email.com"
       },
     ];
   };
@@ -251,6 +275,9 @@ const ServiceProviders = () => {
                   Service
                 </th>
                 <th className="py-3 px-4 text-left text-sm font-semibold text-gray-800 whitespace-nowrap">
+                  Phone
+                </th>
+                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-800 whitespace-nowrap">
                   Status
                 </th>
                 <th className="py-3 px-4 text-left text-sm font-semibold text-gray-800 whitespace-nowrap">
@@ -264,7 +291,7 @@ const ServiceProviders = () => {
             <tbody className="divide-y divide-gray-200">
               {loadingProviders ? (
                 Array.from({ length: 5 }).map((_, index) => (
-                  <TableRowSkeleton key={index} columns={6} />
+                  <TableRowSkeleton key={index} columns={7} />
                 ))
               ) : serviceProvidersLength > 0 ? (
                 serviceProviders.map((provider, index) => (
@@ -285,6 +312,9 @@ const ServiceProviders = () => {
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-800 whitespace-nowrap">
                       {safeString(provider.service, 'General Service')}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-800 whitespace-nowrap">
+                      {formatPhoneNumber(safeString(provider.phone, 'N/A'))}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       <StatusBadge status={provider.status} />
@@ -312,7 +342,7 @@ const ServiceProviders = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="py-8 text-center text-gray-500">
+                  <td colSpan="7" className="py-8 text-center text-gray-500">
                     No service providers found
                   </td>
                 </tr>
@@ -322,7 +352,6 @@ const ServiceProviders = () => {
         </div>
       </div>
 
-    
     </div>
   );
 };
